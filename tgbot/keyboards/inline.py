@@ -11,11 +11,11 @@ async def menu_kb():
     keyboard.button(text="♻️Новый обмен♻️", callback_data="exchange")
     keyboard.button(text="🗄История обменов 🗄", callback_data=HistoryCallback(current_idx=0))
     keyboard.button(text="📎 Избранные направления 📎", callback_data=SelectedDirectionsExchange(current_idx=0))
-    keyboard.button(text="💰Резервы💰", callback_data="reserves")
-    keyboard.button(text="☎️ Контакты ☎️", callback_data="contact")
+    # keyboard.button(text="💰Резервы💰", callback_data="reserves")
+    # keyboard.button(text="☎️ Контакты ☎️", callback_data="contact")
     keyboard.button(text="🆘 Поддержка 🆘", callback_data="support")
-    keyboard.button(text="📝 Правила 📝", callback_data="rules")
-    keyboard.button(text="🕵️‍♂️ AML/KYC политика 🕵️‍♂️", callback_data="policy")
+    # keyboard.button(text="📝 Правила 📝", callback_data="rules")
+    # keyboard.button(text="🕵️‍♂️ AML/KYC политика 🕵️‍♂️", callback_data="policy")
     keyboard.adjust(1)
     return keyboard.as_markup()
 
@@ -122,7 +122,7 @@ async def back_to_manu_kb():
 
 async def support_kb():
     keyboard = InlineKeyboardBuilder()
-    keyboard.button(text='🆘 Обратиться в поддержку 🆘', url='https://t.me/CriptHub_Support')
+    keyboard.button(text='🆘 Обратиться в поддержку 🆘', url='https://t.me/FastExchange_Support')
     keyboard.button(text="🔙 Вернуться в главное меню", callback_data="back_to_manu")
     keyboard.adjust(1)
     return keyboard.as_markup()

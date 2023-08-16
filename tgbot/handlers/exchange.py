@@ -220,7 +220,7 @@ async def create_exchange(call: CallbackQuery, config: Config, state: FSMContext
         exchange = await create_exchange_db(user, f'{response["data"]["psys_give"]} ➡️ {response["data"]["psys_get"]}',
                                             response["data"]["id"])
 
-        if response["data"]["api_actions"]["pay"] == 'api':
+        if data.get("direction_id") not in ['1009', '1011', '1008', '1005', '1004', '1003', '119']:
             text = [(await clear_text(response["data"]["api_actions"]["instruction"]))]
             link = None
         else:

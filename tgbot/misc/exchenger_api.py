@@ -2,6 +2,8 @@ import aiohttp
 from aiogram.utils.markdown import hcode
 from loguru import logger
 
+from tgbot.misc.tools import good_direction_id
+
 
 class PremiumExchanger:
     def __init__(self, api_login: str, api_key: str) -> None:
@@ -69,6 +71,8 @@ class PremiumExchanger:
 
     async def unique_give_currencies(self):
         directions = await self.get_directions()
+        good_direction = await good_direction_id()
+        directions = [i for i in directions if i['direction_id'] in good_direction]
         currencies = {}
         for direction in directions:
             if not direction['currency_give_id'] in currencies:
@@ -77,6 +81,8 @@ class PremiumExchanger:
 
     async def get_received_currencies(self, currency_give_id):
         directions = await self.get_directions()
+        good_direction = await good_direction_id()
+        directions = [i for i in directions if i['direction_id'] in good_direction]
         currencies = {}
         for direction in directions:
             if direction['currency_give_id'] == currency_give_id:

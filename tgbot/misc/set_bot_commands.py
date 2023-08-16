@@ -12,13 +12,5 @@ async def set_commands(bot: Bot):
             command="support",
             description="🆘 Поддержка 🆘",
         ),
-        BotCommand(
-            command="rules",
-            description="📝 Правила 📝",
-        ),
-        BotCommand(
-            command="policy",
-            description="🕵️‍♂️ AML/KYC политика 🕵️‍♂️",
-        ),
     ]
     await bot.set_my_commands(commands=commands, scope=BotCommandScopeDefault())
