@@ -178,7 +178,6 @@ async def valid_exchange(message: Message, state: FSMContext, config: Config):
         f'{await format_number(direction["course_get"])} {direction["currency_code_get"]}',
         f'{hbold("Отдаете:")} {hcode(await format_number(amount_calc["sum_give"]))} {direction["currency_code_give"]}',
         f'{hbold("Получаете:")} {hcode(await format_number(amount_calc["sum_get"]))} {direction["currency_code_get"]}',
-        f'Создавая заявку вы подтверждаете что ознакомились и согласны с правилами и AML/KYC политикой'
     ]
     for i in get_field:
         text.append(f'{hbold(get_field[i]["label"])}: {hcode(get_field[i]["value"])}')
