@@ -4,7 +4,7 @@ from aiogram.utils.markdown import hbold
 
 from tgbot.misc.exchenger_api import PremiumExchanger
 from tgbot.misc.tools import get_status_info
-from tgbot.models.db_commands import get_all_exchangers
+from tgbot.models.db_commands import get_all_exchangers, get_direction, add_direction
 
 
 async def check_exchange_status(bot: Bot, exchanger: PremiumExchanger):
@@ -24,3 +24,19 @@ async def check_exchange_status(bot: Bot, exchanger: PremiumExchanger):
             except (TelegramForbiddenError, TelegramBadRequest):
                 pass
             exchange.save()
+
+
+async def parse_direction(exchanger: PremiumExchanger):
+    directions = await exchanger.get_directions()
+    if not directions:
+        return
+    count = 0
+    for direction in directions:
+        check_dir = await get_direction(direction['direction_id'])
+        if check_dir:
+            continue
+
+        await add_direction(direction['direction_id'], f'{direction["currency_give_title"]} ➡️ '
+                                                       f'{direction["currency_get_title"]}')
+        count += 1
+    return count

@@ -116,3 +116,95 @@ class ExchangeHistory(CreatedModel):
 
     def __str__(self):
         return str(self.exchange_id)
+
+
+class Mailing(models.Model):
+    CHOICES = (
+        ("no_media", 'Без медиа'),
+        ("photo", 'Фото'),
+        ("video", 'Видео'),
+        ("document", 'Документ'),
+    )
+    media_type = models.CharField(
+        max_length=50,
+        help_text='Тип медиа',
+        verbose_name='Тип медиа',
+        choices=CHOICES
+    )
+    text = models.TextField(
+        max_length=4096,
+        help_text='Текст рассылки',
+        verbose_name='Текст',
+        blank=True,
+        null=True,
+    )
+    file_id = models.CharField(
+        max_length=255,
+        help_text='File ID медиа рассылки',
+        verbose_name='File ID',
+        blank=True,
+        null=True,
+    )
+    date_malling = models.DateTimeField(
+        help_text='Дата рассылки',
+        verbose_name='Дата',
+    )
+    is_sent = models.BooleanField(
+        help_text='Статус отправки',
+        verbose_name='Статус отправки',
+        default=False
+    )
+
+    class Meta:
+        verbose_name = 'Рассылки'
+        verbose_name_plural = 'Рассылки'
+
+    def __str__(self):
+        return str(self.pk)
+
+
+class Direction(models.Model):
+    info_choices = (
+        ("site", 'Сайт'),
+        ("merchant", 'Мерчант'),
+    )
+    direction_id = models.CharField(
+        max_length=20,
+        verbose_name='ID направления'
+    )
+    name = models.CharField(
+        max_length=100,
+        verbose_name='Название направления'
+    )
+    is_active = models.BooleanField(
+        verbose_name='Активное/Не активное направление',
+        default=True
+    )
+    pay_link = models.BooleanField(
+        verbose_name='Ссылка для оплаты включена/выключена',
+        default=False
+    )
+    info = models.CharField(
+        verbose_name='Инструкция к оплате',
+        max_length=50,
+        choices=info_choices,
+        default='site'
+    )
+    requisites = models.BooleanField(
+        verbose_name='Выдача реквизитов',
+        default=False
+    )
+    direction_number = models.IntegerField(
+        verbose_name='Сортировка',
+        blank=True,
+        null=True,
+        unique=True
+    )
+
+    class Meta:
+        verbose_name = 'Направления'
+        verbose_name_plural = 'Направления'
+        ordering = ('direction_number',)
+
+    def __str__(self):
+        return self.name

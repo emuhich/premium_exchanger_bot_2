@@ -2,7 +2,7 @@ import aiohttp
 from aiogram.utils.markdown import hcode
 from loguru import logger
 
-from tgbot.misc.tools import good_direction_id
+from tgbot.models.db_commands import get_inactive_direction, sorted_direction_db
 
 
 class PremiumExchanger:
@@ -25,8 +25,11 @@ class PremiumExchanger:
     async def get_directions(self):
         url = f'https://{self.host}/api/userapi/v1/get_directions'
         response = await self.get_request(url)
+        sorted_direction = await sorted_direction_db()
         if response:
-            return response['data']
+            directions = response['data']
+            return sorted(directions, key=lambda x: sorted_direction.get(x['direction_id']) if sorted_direction.get(
+                x['direction_id']) else 100)
         return None
 
     async def get_direction_currencies(self):
@@ -51,7 +54,10 @@ class PremiumExchanger:
     async def unique_received_currencies(self):
         directions = await self.get_directions()
         unique_get_currencies = {}
+        inactive_direction = await get_inactive_direction()
         for direction in directions:
+            if direction['direction_id'] in inactive_direction:
+                continue
             if not direction['currency_get_id'] in unique_get_currencies:
                 unique_get_currencies[direction['currency_get_id']] = direction['currency_get_title']
         return unique_get_currencies
@@ -71,20 +77,22 @@ class PremiumExchanger:
 
     async def unique_give_currencies(self):
         directions = await self.get_directions()
-        good_direction = await good_direction_id()
-        directions = [i for i in directions if i['direction_id'] in good_direction]
         currencies = {}
+        inactive_direction = await get_inactive_direction()
         for direction in directions:
+            if direction['direction_id'] in inactive_direction:
+                continue
             if not direction['currency_give_id'] in currencies:
                 currencies[direction['currency_give_id']] = direction['currency_give_title']
         return currencies
 
     async def get_received_currencies(self, currency_give_id):
         directions = await self.get_directions()
-        good_direction = await good_direction_id()
-        directions = [i for i in directions if i['direction_id'] in good_direction]
         currencies = {}
+        inactive_direction = await get_inactive_direction()
         for direction in directions:
+            if direction['direction_id'] in inactive_direction:
+                continue
             if direction['currency_give_id'] == currency_give_id:
                 currencies[direction['currency_get_id']] = direction['currency_get_title']
         return currencies

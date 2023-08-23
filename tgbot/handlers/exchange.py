@@ -1,19 +1,19 @@
-import re
-
 from aiogram import Router, F
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message
-from aiogram.utils.markdown import hbold, hcode, hlink
+from aiogram.utils.markdown import hbold, hcode
 from loguru import logger
 
+from admin_panel.telebot.models import Direction
 from tgbot.config import Config
 from tgbot.keyboards.callback_data import CurrencyGiveCallback, CurrencyGetCallback, SelectedDirectionsCallback, \
     MakeDeal, CancelBidCallback
 from tgbot.keyboards.inline import currencies_give_kb, currencies_get_kb, directions_info_kb, back_to_direction, \
     valid_exchange_kb, back_to_direction_create, back_to_manu_kb, cancel_bid_kb, swap_amount_method_kb
 from tgbot.misc.states import States
-from tgbot.misc.tools import format_number, round_amount, clear_text
-from tgbot.models.db_commands import select_client, create_selected_directions, create_exchange_db, get_exchange
+from tgbot.misc.tools import format_number, clear_text
+from tgbot.models.db_commands import select_client, create_selected_directions, create_exchange_db, get_exchange, \
+    get_direction
 
 exchange_router = Router()
 
@@ -47,12 +47,6 @@ async def show_direction(call: CallbackQuery, callback_data: CurrencyGetCallback
 
     user = await select_client(call.message.chat.id)
 
-    cash_ids = ['57', '103', '20', '88', '100']
-
-    cash_status = False
-    if callback_data.currency_id in cash_ids or currency_give_id in cash_ids:
-        cash_status = True
-
     await call.message.edit_text(text='\n'.join([
         f'{hbold(f"{give_name} ➡️ {get_name}")}\n',
         f'{hbold("Курс:")} {await format_number(direction["course_give"])} {direction["currency_code_give"]} = '
@@ -60,7 +54,7 @@ async def show_direction(call: CallbackQuery, callback_data: CurrencyGetCallback
         f'{hbold("Резерв: ")} {hcode(await format_number(direction["reserve"]))} {direction["currency_code_get"]}',
         f'{hbold("Мин. сумма:")} {hcode(direction["min_give"])} {direction["currency_code_give"]}',
         f'{hbold("Макс. сумма:")} {hcode(direction["max_give"])} {direction["currency_code_give"]}',
-    ]), reply_markup=await directions_info_kb(currency_give_id, user, direction['id'], cash_status, direction['url']))
+    ]), reply_markup=await directions_info_kb(currency_give_id, user, direction['id']))
 
 
 @exchange_router.callback_query(SelectedDirectionsCallback.filter())
@@ -156,7 +150,7 @@ async def valid_amount(message: Message, state: FSMContext, config: Config):
 
 
 @exchange_router.message(States.account)
-async def valid_exchange(message: Message, state: FSMContext):
+async def valid_exchange(message: Message, state: FSMContext, config: Config):
     data = await state.get_data()
     get_field = data.get('get_field')
     for i in get_field:
@@ -170,27 +164,10 @@ async def valid_exchange(message: Message, state: FSMContext):
         field = check_field[0]
         return await message.answer(text=f'{get_field[field]["tooltip"]}',
                                     reply_markup=await back_to_direction(data.get('currency_get_id')))
-    await state.set_state(States.email)
-    await message.answer(text='Укажите свою почту ниже',
-                         reply_markup=await back_to_direction(data.get('currency_get_id')))
-
-
-@exchange_router.message(States.email)
-async def valid_email(message: Message, state: FSMContext, config: Config):
-    data = await state.get_data()
-    get_field = data.get('get_field')
-    pattern = r'^[\w\.-]+@[\w\.-]+\.\w+$'
-    if not re.match(pattern, message.text):
-        return message.answer(text='Кажется вы ошиблись, введите новую почту ниже',
-                              reply_markup=await back_to_direction(data.get('currency_get_id')))
-    await state.update_data(email=message.text)
     direction = await config.misc.exchanger.get_direction(data.get("direction_id"))
 
-    # amount_give = data.get('amount')
-
-    amount_calc = (await config.misc.exchanger.get_calc(data.get("direction_id"), data.get('amount'), data.get('amount_method')))
-
-    # amount_get = await round_amount(data.get('currency_get_id'), float(amount_get))
+    amount_calc = (
+        await config.misc.exchanger.get_calc(data.get("direction_id"), data.get('amount'), data.get('amount_method')))
 
     get_name = await config.misc.exchanger.get_full_name_currency('get', data.get('currency_get_id'))
     give_name = await config.misc.exchanger.get_full_name_currency('give', data.get('currency_give_id'))
@@ -201,7 +178,7 @@ async def valid_email(message: Message, state: FSMContext, config: Config):
         f'{await format_number(direction["course_get"])} {direction["currency_code_get"]}',
         f'{hbold("Отдаете:")} {hcode(await format_number(amount_calc["sum_give"]))} {direction["currency_code_give"]}',
         f'{hbold("Получаете:")} {hcode(await format_number(amount_calc["sum_get"]))} {direction["currency_code_get"]}',
-        f'{hbold("Почта: ")} {hcode(message.text)}'
+        f'Создавая заявку вы подтверждаете что ознакомились и согласны с правилами и AML/KYC политикой'
     ]
     for i in get_field:
         text.append(f'{hbold(get_field[i]["label"])}: {hcode(get_field[i]["value"])}')
@@ -215,31 +192,30 @@ async def create_exchange(call: CallbackQuery, config: Config, state: FSMContext
     user = await select_client(call.message.chat.id)
     data = await state.get_data()
     response = await config.misc.exchanger.create_bid(
-        data.get("direction_id"), data.get('amount'), data.get('email'), data.get('get_field'), data.get('amount_method'))
+        data.get("direction_id"), data.get('amount'), 'dominic@toretto.ru', data.get('get_field'),
+        data.get('amount_method'))
     if response['error'] == "0":
         exchange = await create_exchange_db(user, f'{response["data"]["psys_give"]} ➡️ {response["data"]["psys_get"]}',
                                             response["data"]["id"])
+        direction_db: Direction = await get_direction(data.get("direction_id"))
+        link = direction_db.pay_link
 
-        if data.get("direction_id") not in ['1009', '1011', '1008', '1005', '1004', '1003', '119']:
-            text = [(await clear_text(response["data"]["api_actions"]["instruction"]))]
-            link = None
-        else:
-            direction = await config.misc.exchanger.get_direction(data.get("direction_id"))
-            timeline_text = direction['info'].get('timeline_text')
-
+        if direction_db.pay_link:
             link = response["data"]["api_actions"]["pay"]
-            text = []
-            if timeline_text:
-                text.append((await clear_text(timeline_text)))
-            else:
-                text.append((await clear_text(response["data"]["api_actions"]["instruction"])))
+        if direction_db.info == 'site':
+            direction = await config.misc.exchanger.get_direction(data.get("direction_id"))
+            text = [(await clear_text(direction['info'].get('timeline_text')))]
+        else:
+            text = [(await clear_text(response["data"]["api_actions"]["instruction"]))]
 
-            if 'address' in response["data"]["api_actions"]:
-                text.append(
-                    f'\nПереведите {hcode(response["data"]["api_actions"]["pay_amount"])} {response["data"]["currency_code_give"]} на счет: '
-                    f'{hcode(response["data"]["api_actions"]["address"])}')
+        if direction_db.requisites:
+            text.append(
+                f'\nПереведите {hcode(response["data"]["api_actions"]["pay_amount"])} {response["data"]["currency_code_give"]} на счет: '
+                f'{hcode(response["data"]["api_actions"]["address"])}')
+
         return await call.message.edit_text(text='\n'.join(text), reply_markup=await cancel_bid_kb(
             exchange_id=exchange.pk, url=link))
+
     logger.error(f'Ошибка про создании заявки: {response["error_fields"]}')
     await call.message.edit_text(text='❌ Произошла ошибка, вы ввели некорректные данные, попробуйте повторить',
                                  reply_markup=await back_to_direction_create(data.get('currency_get_id')))

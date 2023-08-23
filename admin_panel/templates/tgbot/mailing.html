@@ -1,0 +1,79 @@
+{% extends 'adminlte/base.html' %}
+{% block content %}
+<div class="col-md-5">
+    {% if error %}
+        <div class="alert alert-danger" role="alert">
+            {{ error }}
+        </div>
+    {% elif saved %}
+        <div class="alert alert-success" role="alert">
+            Рассылка успешно зарегистрирована
+            <a href="{{ url }}">Ссылка на редактирование</a>
+        </div>
+    {% endif %}
+    <div class="card card-warning">
+        <div class="card-header">
+            <h3 class="card-title">Форма рассылки</h3>
+        </div>
+        <div class="card-body">
+            <form id="send_form " method="post" action="{% url 'panel:mailing' %}">
+                {% csrf_token %}
+                <div class="mb-3">
+                    <label for="media_type" class="form-label">Тип медиа</label>
+                    <select class="form-control" id="media_type" name="media_type">
+                        <option value="no_media" selected>без медиа</option>
+                        <option value="photo">фото</option>
+                        <option value="video">видео</option>
+                        <option value="document">документ</option>
+                    </select>
+                </div>
+
+                <div class="mb-3" id="file_id_div" style="display: none;">
+                    <label for="file_id" class="form-label">File ID</label>
+                    <input type="text" class="form-control" id="file_id" name="file_id" value="{{ file_id }}">
+                </div>
+
+                <div class="mb-3">
+                    <label for="message_text" class="form-label">Текст рассылки</label>
+                    <textarea class="form-control" id="message_text" name="message_text"
+                              rows="4">{{ message_text }}</textarea>
+                </div>
+
+                <div class="mb-3 form-check">
+                    <input type="checkbox" class="form-check-input" id="schedule_checkbox" name="schedule_checkbox"
+                            {% if schedule_checkbox %} checked {% endif %}>
+                    <label class="form-check-label" for="schedule_checkbox">Разослать по времени</label>
+                </div>
+
+                <div class="mb-3" id="schedule_datetime_div" style="display: none;">
+                    <label for="schedule_datetime" class="form-label">Дата и время рассылки</label>
+                    <input type="datetime-local" class="form-control" id="schedule_datetime"
+                           name="schedule_datetime" value="{{ schedule_datetime }}">
+                </div>
+
+                <button type="submit" class="btn btn-primary">Отправить рассылку</button>
+            </form>
+        </div>
+    </div>
+</div>
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script>
+    $(document).ready(function () {
+        $("#media_type").change(function () {
+            if ($(this).val() === "no_media") {
+                $("#file_id_div").hide();
+            } else {
+                $("#file_id_div").show();
+            }
+        });
+
+        $("#schedule_checkbox").change(function () {
+            if ($(this).is(":checked")) {
+                $("#schedule_datetime_div").show();
+            } else {
+                $("#schedule_datetime_div").hide();
+            }
+        });
+    });
+</script>
+{% endblock %}

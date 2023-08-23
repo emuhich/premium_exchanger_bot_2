@@ -5,5 +5,5 @@ from . import views
 app_name = 'panel'
 
 urlpatterns = [
-    path('index.html', views.statistics, name='statistics'),
+    path('mailing', views.mailing, name='mailing'),
 ]

@@ -38,17 +38,15 @@ async def currencies_get_kb(currencies):
     return keyboard.as_markup()
 
 
-async def directions_info_kb(currency_id, user, direction_id, cash_status, url):
+async def directions_info_kb(currency_id, user, direction_id):
     keyboard = InlineKeyboardBuilder()
     selected = user.selected.filter(direction_id=direction_id)
-    if cash_status:
-        keyboard.button(text="Оформить сделку на сайте", url=url)
-    else:
-        keyboard.button(text="Оформить сделку", callback_data=MakeDeal(
-            direction_id=direction_id,
-            method='give'
-        ))
-    if not selected and not cash_status:
+
+    keyboard.button(text="Оформить сделку", callback_data=MakeDeal(
+        direction_id=direction_id,
+        method='give'
+    ))
+    if not selected:
         keyboard.button(text="Добавить в избранное",
                         callback_data=SelectedDirectionsCallback(direction_id=direction_id))
     keyboard.button(text="🔙 Назад", callback_data=CurrencyGiveCallback(currency_id=currency_id))

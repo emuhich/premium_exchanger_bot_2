@@ -8,7 +8,7 @@ from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.fsm.storage.redis import RedisStorage
 from aioredis import Redis
 
-from tgbot.config import load_config, Config
+
 from tgbot.handlers.echo import echo_router
 from tgbot.middlewares.config import ConfigMiddleware
 from tgbot.misc.logging import configure_logger
@@ -18,9 +18,14 @@ from tgbot.services import broadcaster
 logger = logging.getLogger(__name__)
 
 
-def scheduler_jobs(bot, config: Config):
+def scheduler_jobs(bot, config):
     from tgbot.misc.start_by_time import check_exchange_status
+    from tgbot.misc.mailing import start_milling
     config.misc.scheduler.add_job(check_exchange_status, 'interval', minutes=5, args=[bot, config.misc.exchanger])
+    config.misc.scheduler.add_job(start_milling, "interval", minutes=1,
+                                  kwargs={
+                                      'bot': bot
+                                  })
 
 
 async def on_startup(bot: Bot, admin_ids: list[int], config):
@@ -46,6 +51,7 @@ def setup_django():
 
 async def main():
     setup_django()
+    from tgbot.config import load_config
 
     logger.info("Starting bot")
     config = load_config(".env")
@@ -63,9 +69,11 @@ async def main():
     from tgbot.handlers.echange_history import exchange_history_router
     from tgbot.handlers.selected_directions import selected_directions_router
     from tgbot.handlers.reserves import reserves_router
+    from tgbot.handlers.admin import admin_router
 
     for router in [
         user_router,
+        admin_router,
         exchange_router,
         exchange_history_router,
         selected_directions_router,
