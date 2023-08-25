@@ -1,4 +1,5 @@
 from aiogram import Router, F
+from aiogram.exceptions import TelegramBadRequest
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message
 from aiogram.utils.markdown import hbold, hcode
@@ -88,7 +89,7 @@ async def amount_exchange(call: CallbackQuery, callback_data: MakeDeal, state: F
     else:
         currency_name = direction['currency_code_get']
         await call.message.edit_text(text='\n'.join([
-            f'{hbold(f"Введите сумму в {currency_name}")} которую хотите отдать',
+            f'{hbold(f"Введите сумму в {currency_name}")} которую хотите получить',
             f'{hbold("Мин. сумма:")} {hcode(direction["min_get"])} {currency_name}',
             f'{hbold("Макс. сумма:")} {hcode(direction["max_get"])} {currency_name}',
         ]), reply_markup=kb)
@@ -187,6 +188,10 @@ async def valid_exchange(message: Message, state: FSMContext, config: Config):
 
 @exchange_router.callback_query(F.data == "confirm_exchange")
 async def create_exchange(call: CallbackQuery, config: Config, state: FSMContext):
+    try:
+        await call.message.delete()
+    except TelegramBadRequest:
+        pass
     await state.set_state(None)
     user = await select_client(call.message.chat.id)
     data = await state.get_data()
@@ -212,11 +217,11 @@ async def create_exchange(call: CallbackQuery, config: Config, state: FSMContext
                 f'\nПереведите {hcode(response["data"]["api_actions"]["pay_amount"])} {response["data"]["currency_code_give"]} на счет: '
                 f'{hcode(response["data"]["api_actions"]["address"])}')
 
-        return await call.message.edit_text(text='\n'.join(text), reply_markup=await cancel_bid_kb(
+        return await call.message.answer(text='\n'.join(text), reply_markup=await cancel_bid_kb(
             exchange_id=exchange.pk, url=link))
 
     logger.error(f'Ошибка про создании заявки: {response["error_fields"]}')
-    await call.message.edit_text(text='❌ Произошла ошибка, вы ввели некорректные данные, попробуйте повторить',
+    await call.message.answer(text='❌ Произошла ошибка, вы ввели некорректные данные, попробуйте повторить',
                                  reply_markup=await back_to_direction_create(data.get('currency_get_id')))
 
 
