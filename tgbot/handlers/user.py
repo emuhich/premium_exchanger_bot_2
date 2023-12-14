@@ -1,9 +1,15 @@
+import random
+import string
+from io import BytesIO
+
 from aiogram import Router, F, exceptions
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
-from aiogram.types import Message, CallbackQuery
+from aiogram.types import Message, CallbackQuery, BufferedInputFile
+from captcha.image import ImageCaptcha
 
 from tgbot.keyboards.inline import menu_kb, back_to_manu_kb, support_kb
+from tgbot.misc.states import States
 from tgbot.models.db_commands import select_client, create_client
 
 user_router = Router()
@@ -14,8 +20,35 @@ async def user_start(message: Message, state: FSMContext):
     await state.set_state(None)
     user = await select_client(message.chat.id)
     if not user:
-        await create_client(message.from_user.username, message.chat.id, message.from_user.url,
-                            message.from_user.full_name)
+        captcha_code = ''.join(random.choices(string.ascii_letters + string.digits, k=5))
+        image_captcha = ImageCaptcha(width=280, height=90)
+        image = image_captcha.generate_image(captcha_code)
+        image_io = BytesIO()
+        image.save(image_io, format='PNG')
+        image_io.seek(0)
+        await state.update_data(captcha_code=captcha_code)
+        await state.set_state(States.captcha_code)
+        return await message.answer_photo(photo=BufferedInputFile(image_io.getvalue(), filename='captcha.png'),
+                                          caption='Введите код с картинки ниже 👇')
+    await message.answer(text="Выберете пункт меню 👇", reply_markup=await menu_kb())
+
+
+@user_router.message(States.captcha_code, F.text)
+async def check_captcha(message: Message, state: FSMContext):
+    data = await state.get_data()
+    captcha_code = data.get('captcha_code')
+    if message.text.lower() != captcha_code.lower():
+        captcha_code = ''.join(random.choices(string.ascii_letters + string.digits, k=5))
+        image_captcha = ImageCaptcha(width=280, height=90)
+        image = image_captcha.generate_image(captcha_code)
+        image_io = BytesIO()
+        image.save(image_io, format='PNG')
+        image_io.seek(0)
+        await state.update_data(captcha_code=captcha_code)
+        return await message.answer_photo(photo=BufferedInputFile(image_io.getvalue(), filename='captcha.png'),
+                                          caption='❌ Ошибка, неверный код, введите новый код ниже 👇')
+    await create_client(message.from_user.username, message.chat.id, message.from_user.url,
+                        message.from_user.full_name)
     await message.answer(text="Выберете пункт меню 👇", reply_markup=await menu_kb())
 
 

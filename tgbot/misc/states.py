@@ -5,3 +5,4 @@ class States(StatesGroup):
     give_amount = State()
     account = State()
     email = State()
+    captcha_code = State()
